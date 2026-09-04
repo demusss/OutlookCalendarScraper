@@ -9,7 +9,7 @@ services:
       - OUTLOOK_URL=${OUTLOOK_URL}
       - TZ=Europe/Warsaw
     volumes:
-      - ./outlook.ics:/outlook_calendar_scraper/outlook.ics
+      - ./data:/outlook_calendar_scraper/data
     shm_size: "2gb"
 
   web:
@@ -17,6 +17,6 @@ services:
     container_name: calendar_web
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8282:80"
     volumes:
-      - ./outlook.ics:/usr/share/nginx/html/outlook.ics:ro
+      - ./data:/usr/share/nginx/html:ro
