@@ -41,7 +41,8 @@ cd OutlookCalendarScraper
 ### Create enviornment file
 ```
 nano .env
-CALENDAR_URL=https://your-outlook-calendar-url
+OUTLOOK_URL=https://your-outlook-calendar-url
+SCRAPE_DAYS=7
 ```
 
 ### Start services

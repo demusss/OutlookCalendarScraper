@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import logging
 import re
 
@@ -19,8 +19,19 @@ logging.basicConfig(level=logging.INFO)
 
 
 class CalendarScraper:
-    def __init__(self, url):
+    def __init__(self, url, scrape_days: int = 7):
         self.url = url
+        self.scrape_days = scrape_days
+
+        if self.scrape_days <= 0:
+            raise ValueError(
+                "scrape_days must be a positive integer"
+            )
+
+    def is_within_scrape_window(self, event_date: date) -> bool:
+        today = datetime.now().date()
+        window_end = today + timedelta(days=self.scrape_days)
+        return today <= event_date < window_end
 
     # ---------------------------------------------------------
     # Initialise Chrome
@@ -56,8 +67,7 @@ class CalendarScraper:
         return driver
 
     # ---------------------------------------------------------
-    # Convert Outlook aria-label into the format expected by
-    # Util.format_date()
+    # Extract the date and times from Outlook's aria-label.
     #
     # Example aria-label:
     #
@@ -65,11 +75,9 @@ class CalendarScraper:
     # Thursday, December 3, 2026,
     # Free, Recurring event, Private
     #
-    # Returns:
-    #
-    # Thu 12/3/2026 2:00 PM - 2:00 PM
+    # Returns the calendar date, start time, and end time.
     # ---------------------------------------------------------
-    def parse_aria_date(self, aria_label: str) -> str:
+    def parse_aria_date(self, aria_label: str) -> tuple[str, str, str]:
         if not aria_label:
             raise ValueError(
                 "Outlook event does not contain an aria-label."
@@ -126,15 +134,14 @@ class CalendarScraper:
             f"{parsed_date.strftime('%a')} "
             f"{parsed_date.month}/"
             f"{parsed_date.day}/"
-            f"{parsed_date.year} "
-            f"{start_time} - {end_time}"
+            f"{parsed_date.year}"
         )
 
         #logger.info(
         #    f"Final parsed date for ICS: {date!r}"
         #)
 
-        return date
+        return date, start_time, end_time
 
     # ---------------------------------------------------------
     # Re-find an event if Selenium marks the original element
@@ -161,7 +168,7 @@ class CalendarScraper:
         event,
         timeout: int = 10,
         event_count: int = 0,
-    ) -> list:
+    ) -> list | None:
 
         wait = WebDriverWait(driver, timeout)
 
@@ -219,9 +226,19 @@ class CalendarScraper:
         # Opening Outlook's popup can cause calendar elements
         # to become stale.
         # -----------------------------------------------------
-        date = self.parse_aria_date(
+        event_date, start_time, end_time = self.parse_aria_date(
             aria_label
         )
+
+        parsed_event_date = datetime.strptime(
+            event_date,
+            "%a %m/%d/%Y",
+        ).date()
+
+        if not self.is_within_scrape_window(
+            parsed_event_date
+        ):
+            return None
 
         # -----------------------------------------------------
         # Click event
@@ -299,83 +316,6 @@ class CalendarScraper:
             title = "Outlook Event"
 
         # -----------------------------------------------------
-        # Initialise description/location variables
-        # -----------------------------------------------------
-        meet_link = None
-        classroom = ""
-
-        # -----------------------------------------------------
-        # Try to get Teams meeting link
-        # -----------------------------------------------------
-        try:
-            desc_element = WebDriverWait(
-                popup,
-                5,
-            ).until(
-                EC.presence_of_element_located(
-                    (
-                        By.CSS_SELECTOR,
-                        'div[visibility="hidden"]',
-                    )
-                )
-            )
-
-            description_text = (
-                desc_element.get_attribute(
-                    "textContent"
-                )
-                or ""
-            ).strip()
-
-            meet_url_pattern = (
-                r"https://teams\.microsoft\.com/"
-                r"meet/\S+"
-            )
-
-            match = re.search(
-                meet_url_pattern,
-                description_text,
-            )
-
-            if match:
-                meet_link = match.group(0)
-
-        except TimeoutException:
-            pass
-
-        # -----------------------------------------------------
-        # If no Teams link, try to get classroom/location
-        # -----------------------------------------------------
-        if not meet_link:
-            try:
-                loc = WebDriverWait(
-                    popup,
-                    5,
-                ).until(
-                    EC.presence_of_element_located(
-                        (
-                            By.CSS_SELECTOR,
-                            'span[class="QI7ov"]',
-                        )
-                    )
-                ).text.strip()
-
-                classroom_pattern = (
-                    r"Sala:\s*\d+"
-                )
-
-                match = re.search(
-                    classroom_pattern,
-                    loc,
-                )
-
-                if match:
-                    classroom = match.group(0)
-
-            except TimeoutException:
-                pass
-
-        # -----------------------------------------------------
         # Close popup
         # -----------------------------------------------------
         try:
@@ -410,19 +350,12 @@ class CalendarScraper:
         # -----------------------------------------------------
         # Create returned event data
         # -----------------------------------------------------
-        if meet_link:
-            event_data = [
-                "[Remote] " + title,
-                date,
-                meet_link,
-            ]
-
-        else:
-            event_data = [
-                "[OnSite] " + title,
-                date,
-                classroom,
-            ]
+        event_data = [
+            title,
+            event_date,
+            start_time,
+            end_time,
+        ]
 
         logger.info(
             f"Event scraped #{event_count}: "
@@ -613,9 +546,10 @@ class CalendarScraper:
                         event_position + 1,
                     )
 
-                    parsed_events_data.append(
-                        event_data
-                    )
+                    if event_data is not None:
+                        parsed_events_data.append(
+                            event_data
+                        )
 
                 except Exception:
                     logger.exception(

@@ -5,13 +5,13 @@ class Util:
     # ---------------------------------------------------------
     # Convert scraper date format into datetime objects
     #
-    # Expected:
-    #
-    # Thu 12/3/2026 2:00 PM - 2:00 PM
+    # Expected date and time values from the Outlook UI.
     # ---------------------------------------------------------
     @staticmethod
     def format_date(
         date: str,
+        start_time: str,
+        end_time: str,
     ) -> tuple[datetime, datetime]:
 
         if not date:
@@ -19,48 +19,33 @@ class Util:
                 "Event date is empty."
             )
 
-        if " - " not in date:
-            raise ValueError(
-                "Unexpected date format. "
-                "Expected something like "
-                "'Thu 12/3/2026 2:00 PM - 3:00 PM', "
-                f"but received: {date!r}"
-            )
-
-        start_date, end_time_str = (
-            date.split(
-                " - ",
-                1,
-            )
-        )
-
         try:
             event_start = datetime.strptime(
-                start_date.strip(),
+                f"{date.strip()} {start_time.strip()}",
                 "%a %m/%d/%Y %I:%M %p",
             )
 
         except ValueError as exc:
             raise ValueError(
                 "Could not parse event start date: "
-                f"{start_date!r}"
+                f"{date!r} {start_time!r}"
             ) from exc
 
         try:
-            end_time = datetime.strptime(
-                end_time_str.strip(),
+            parsed_end_time = datetime.strptime(
+                end_time.strip(),
                 "%I:%M %p",
             ).time()
 
         except ValueError as exc:
             raise ValueError(
                 "Could not parse event end time: "
-                f"{end_time_str!r}"
+                f"{end_time!r}"
             ) from exc
 
         event_end = datetime.combine(
             event_start.date(),
-            end_time,
+            parsed_end_time,
         )
 
         # -----------------------------------------------------

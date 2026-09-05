@@ -19,17 +19,32 @@ class App:
         )
 
         self.url = os.getenv(
-            "CALENDAR_URL"
+            "OUTLOOK_URL"
         )
 
         if not self.url:
             raise ValueError(
-                "CALENDAR_URL is not set in .env"
+                "OUTLOOK_URL is not set in .env"
+            )
+
+        try:
+            self.scrape_days = int(
+                os.getenv("SCRAPE_DAYS", "7")
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "SCRAPE_DAYS must be a positive integer"
+            ) from exc
+
+        if self.scrape_days <= 0:
+            raise ValueError(
+                "SCRAPE_DAYS must be a positive integer"
             )
 
     def runApp(self) -> None:
         events = CalendarScraper(
-            self.url
+            self.url,
+            self.scrape_days,
         ).run()
 
         logger.info(
@@ -42,7 +57,7 @@ class App:
             events,
             start=1,
         ):
-            if len(event) < 3:
+            if len(event) < 4:
                 logger.warning(
                     "Skipping malformed event "
                     f"#{event_number}: {event!r}"
@@ -51,18 +66,22 @@ class App:
 
             e_title = event[0]
             e_date = event[1]
-            e_desc = event[2]
+            e_start_time = event[2]
+            e_end_time = event[3]
 
             logger.info(
                 f"Adding event #{event_number}: "
                 f"title={e_title!r}, "
-                f"date={e_date!r}"
+                f"date={e_date!r}, "
+                f"start={e_start_time!r}, "
+                f"end={e_end_time!r}"
             )
 
             ics_gen_inst.create_event(
                 e_title,
                 e_date,
-                e_desc,
+                e_start_time,
+                e_end_time,
             )
 
 

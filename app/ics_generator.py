@@ -23,12 +23,15 @@ class IcsGenerator:
         self,
         title,
         date,
-        desc,
+        start_time,
+        end_time,
     ) -> None:
 
         event_start_date, event_end_date = (
             Util.format_date(
-                date
+                date,
+                start_time,
+                end_time,
             )
         )
 
@@ -38,12 +41,6 @@ class IcsGenerator:
             "summary",
             title,
         )
-
-        if desc:
-            event.add(
-                "description",
-                desc,
-            )
 
         event.add(
             "dtstart",
