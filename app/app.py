@@ -51,7 +51,7 @@ class App:
             f"Scraped {len(events)} events."
         )
 
-        ics_gen_inst = IcsGenerator()
+        valid_events = []
 
         for event_number, event in enumerate(
             events,
@@ -64,6 +64,22 @@ class App:
                 )
                 continue
 
+            valid_events.append(event)
+
+        valid_events.sort(
+            key=lambda event: Util.format_date(
+                event[1],
+                event[2],
+                event[3],
+            )[0]
+        )
+
+        ics_gen_inst = IcsGenerator()
+
+        for event_number, event in enumerate(
+            valid_events,
+            start=1,
+        ):
             e_title = event[0]
             e_date = event[1]
             e_start_time = event[2]
