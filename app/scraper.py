@@ -31,6 +31,12 @@ class CalendarScraper:
     def is_within_scrape_window(self, event_date: date) -> bool:
         today = datetime.now().date()
         window_end = today + timedelta(days=self.scrape_days)
+
+        logger.info(
+            f"Event date = {event_date}, "
+            f"Window end = {window_end}"
+        )
+
         return today <= event_date < window_end
 
     # ---------------------------------------------------------

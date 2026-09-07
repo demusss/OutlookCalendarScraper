@@ -2,7 +2,7 @@ FROM python:3.14-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    SCRAPE_DAYS=7
+    SCRAPE_DAYS=5
 
 WORKDIR /outlook_calendar_scraper
 
