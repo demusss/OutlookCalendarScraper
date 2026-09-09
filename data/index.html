@@ -51,14 +51,6 @@
         const eventsTable = document.getElementById("events");
         const pageTitle = document.getElementById("page-title");
 
-        if (document.lastModified) {
-            updatedAt.textContent = new Date(
-                document.lastModified
-            ).toLocaleString();
-        } else {
-            updatedAt.textContent = "Unavailable";
-        }
-
         Promise.all([
             fetch("/outlook.json"),
             fetch("/scrape_days.json"),
@@ -70,16 +62,30 @@
                     }
                 });
 
+                const outlookLastModified = responses[0].headers.get(
+                    "Last-Modified"
+                );
+
                 return Promise.all(
                     responses.map((response) => response.json())
-                );
+                ).then(([events, settings]) => ({
+                    events,
+                    settings,
+                    outlookLastModified,
+                }));
             })
-            .then(([events, settings]) => {
+            .then(({events, settings, outlookLastModified}) => {
                 const title = `Calendar Events for the next ${
                     settings.scrape_days
                 } days`;
                 document.title = title;
                 pageTitle.textContent = title;
+
+                updatedAt.textContent = outlookLastModified
+                    ? new Date(
+                        outlookLastModified
+                    ).toLocaleString()
+                    : "Unavailable";
 
                 eventsTable.replaceChildren();
                 events.forEach((event) => {

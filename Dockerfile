@@ -50,5 +50,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 
-# Run every 3 hours
-CMD ["bash", "-lc", "while true; do python ./app/app.py; sleep 10800; done"]
+# Run every 5 minutes
+CMD ["bash", "-lc", "while true; do python ./app/app.py; sleep 300; done"]
