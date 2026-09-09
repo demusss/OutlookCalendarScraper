@@ -1,3 +1,4 @@
+import json
 import os
 
 from icalendar import Calendar, Event
@@ -6,8 +7,26 @@ from util import Util
 
 
 class IcsGenerator:
-    def __init__(self):
+    def __init__(self, scrape_days: int = 7):
         self.calendar = Calendar()
+        self.events = []
+        self.scrape_days = scrape_days
+
+        os.makedirs(
+            "data",
+            exist_ok=True,
+        )
+
+        with open(
+            "data/scrape_days.json",
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(
+                {"scrape_days": self.scrape_days},
+                file,
+            )
+            file.write("\n")
 
         self.calendar.add(
             "prodid",
@@ -56,6 +75,15 @@ class IcsGenerator:
             event
         )
 
+        self.events.append(
+            {
+                "title": title,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+        )
+
         os.makedirs(
             "data",
             exist_ok=True,
@@ -68,3 +96,15 @@ class IcsGenerator:
             file.write(
                 self.calendar.to_ical()
             )
+
+        with open(
+            "data/outlook.json",
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(
+                self.events,
+                file,
+                indent=2,
+            )
+            file.write("\n")

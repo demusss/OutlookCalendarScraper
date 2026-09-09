@@ -1,12 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Outlook Calendar</title>
+    <title>Calendar Events</title>
+    <meta charset="UTF-8">
+    <style>
+        table {
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
-    <h1>Outlook Calendar</h1>
+    <h1 id="page-title">Calendar Events</h1>
     <p>
         <a href="/outlook.ics">Download Outlook Calendar</a>
     </p>
+    <p>
+        <a href="/outlook.json">Download Outlook Calendar JSON</a>
+    </p>
+    <p>
+        <strong>Last updated:</strong>
+        <time id="updated-at">Loading...</time>
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Start time</th>
+                <th scope="col">End time</th>
+                <th scope="col">Title</th>
+            </tr>
+        </thead>
+        <tbody id="events">
+            <tr>
+                <td colspan="4">Loading events...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        const updatedAt = document.getElementById("updated-at");
+        const eventsTable = document.getElementById("events");
+        const pageTitle = document.getElementById("page-title");
+
+        if (document.lastModified) {
+            updatedAt.textContent = new Date(
+                document.lastModified
+            ).toLocaleString();
+        } else {
+            updatedAt.textContent = "Unavailable";
+        }
+
+        Promise.all([
+            fetch("/outlook.json"),
+            fetch("/scrape_days.json"),
+        ])
+            .then((responses) => {
+                responses.forEach((response) => {
+                    if (!response.ok) {
+                        throw new Error("Could not load calendar data.");
+                    }
+                });
+
+                return Promise.all(
+                    responses.map((response) => response.json())
+                );
+            })
+            .then(([events, settings]) => {
+                const title = `Calendar Events for the next ${
+                    settings.scrape_days
+                } days`;
+                document.title = title;
+                pageTitle.textContent = title;
+
+                eventsTable.replaceChildren();
+                events.forEach((event) => {
+                    const row = document.createElement("tr");
+
+                    [
+                        event.date,
+                        event.start_time,
+                        event.end_time,
+                        event.title,
+                    ].forEach((value) => {
+                        const cell = document.createElement("td");
+                        cell.textContent = value || "";
+                        row.appendChild(cell);
+                    });
+
+                    eventsTable.appendChild(row);
+                });
+            })
+            .catch((error) => {
+                eventsTable.innerHTML = `
+                    <tr>
+                        <td colspan="4">${error.message}</td>
+                    </tr>
+                `;
+            });
+    </script>
 </body>
 </html>

@@ -74,7 +74,9 @@ class App:
             )[0]
         )
 
-        ics_gen_inst = IcsGenerator()
+        ics_gen_inst = IcsGenerator(
+            self.scrape_days
+        )
 
         for event_number, event in enumerate(
             valid_events,
